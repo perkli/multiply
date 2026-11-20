@@ -28,6 +28,9 @@
     --fast: #dd5434;        /* challenge mode */
     --fast-dark: #b8401f;
     --fast-tint: #f9e5df;
+    --focus: #3f5aa8;       /* hardest mode */
+    --focus-dark: #2f4585;
+    --focus-tint: #e3e8f4;
     --gold: #f2bd3a;
     --gold-tint: #fbf0d2;
 
@@ -93,6 +96,8 @@
   .btn.calm:active { background: var(--calm-dark); }
   .btn.fast { background: var(--fast); color: #fff; }
   .btn.fast:active { background: var(--fast-dark); }
+  .btn.focus { background: var(--focus); color: #fff; }
+  .btn.focus:active { background: var(--focus-dark); }
   .btn.ink { background: var(--ink); color: #fff; }
   .btn.outline { background: var(--surface); border: 1.5px solid var(--line-2); }
 
@@ -136,6 +141,19 @@
   .mode-icon { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; }
   .mode.calm .mode-icon { background: var(--calm); }
   .mode.fast .mode-icon { background: var(--fast); }
+  .mode.focus .mode-icon { background: var(--focus); }
+  .mode.focus {
+    grid-column: 1 / -1; background: var(--focus-tint);
+    display: grid; grid-template-columns: auto 1fr minmax(180px, 240px); align-items: center; gap: 20px;
+  }
+  .focus-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .hard-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hard-list:empty { display: none; }
+  .hard-list span {
+    background: var(--surface); border: 1.5px solid #c9d1e6; border-radius: 8px;
+    padding: 4px 10px; font-size: 15px; font-weight: 700; color: var(--focus-dark);
+  }
+  @media (max-width: 640px) { .mode.focus { display: flex; flex-direction: column; align-items: stretch; } }
   .mode-icon .icon { width: 26px; height: 26px; }
   .mode h3 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.4px; }
   .mode p { margin: 0; font-size: 16px; line-height: 1.45; color: #4a4741; }
@@ -161,6 +179,7 @@
   #play { gap: 16px; }
   #play[data-mode="practice"] { --mode: var(--calm); --mode-tint: var(--calm-tint); }
   #play[data-mode="challenge"] { --mode: var(--fast); --mode-tint: var(--fast-tint); }
+  #play[data-mode="hardest"] { --mode: var(--focus); --mode-tint: var(--focus-tint); }
   .play-bar { display: flex; align-items: center; gap: 16px; }
   .play-bar .middle { flex: 1; display: flex; flex-direction: column; gap: 8px; }
   .play-bar .middle { min-width: 0; }
@@ -345,6 +364,11 @@
     font-size: 20px; font-weight: 700;
   }
   .mistake s { color: var(--bad); font-weight: 600; font-size: 16px; }
+  .mistake.ok { background: var(--good-tint); border-color: var(--good-tint); }
+  .mistake.miss { background: var(--bad-tint); border-color: var(--bad-tint); }
+  .mistake .tag { font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  .hard-table td.slow { color: var(--bad); font-weight: 700; }
+  .stats-note { margin: 14px 0 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
   /* ---------- Stats ---------- */
@@ -389,6 +413,7 @@
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-erase" viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M12 9.5l5 5M17 9.5l-5 5"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/></symbol>
 </svg>
 
@@ -455,6 +480,16 @@
         </div>
         <button class="btn fast" id="startChallenge">Starta</button>
       </div>
+
+      <div class="mode focus">
+        <div class="mode-icon"><svg class="icon"><use href="#i-target"/></svg></div>
+        <div class="focus-body">
+          <h3>Mina svåraste</h3>
+          <p id="hardText"></p>
+          <div class="hard-list" id="hardList"></div>
+        </div>
+        <button class="btn focus" id="startHardest">Träna</button>
+      </div>
     </div>
   </div>
 </section>
@@ -486,7 +521,7 @@
 <section id="result" class="screen">
   <div class="panel result-hero" id="resultHero"></div>
   <div class="panel" id="mistakesCard">
-    <p class="eyebrow">Öva lite mer på</p>
+    <p class="eyebrow" id="mistakesTitle">Öva lite mer på</p>
     <div class="mistakes" id="mistakes"></div>
   </div>
   <div class="actions">
@@ -512,6 +547,10 @@
     </div>
   </div>
   <div class="panel">
+    <p class="eyebrow">Svårast just nu</p>
+    <div id="hardWrap"></div>
+  </div>
+  <div class="panel">
     <p class="eyebrow">Senaste tidsutmaningarna</p>
     <div id="historyWrap"></div>
   </div>
@@ -530,7 +569,7 @@
     tables: [1,2,3,4,5,6,7,8,9,10],
     count: 30,
     time: 180,
-    facts: {},     // "a×b" (a<=b) -> { r: right, w: wrong, last: [true,false,...] }
+    facts: {},     // "a×b" (a<=b) -> { r, w, last: [true,false,...], t: [answer ms, ...] }
     history: [],   // { date, tables, count, time, right, answered, used }
     records: {}    // settingsKey -> { right, used }
   };
@@ -588,6 +627,7 @@
     const rec = store.records[settingsKey()];
     $("tablesHint").textContent = none ? "Välj minst en tabell för att börja."
       : store.tables.length === 10 ? "Alla tabeller är valda." : `Du övar på ${listTables(store.tables)}.`;
+    renderHardCard();
     $("recordLine").innerHTML = rec && !none
       ? `<svg viewBox="0 0 24 24"><use href="#i-star"/></svg>Rekord: ${rec.right} rätt på ${fmtTime(rec.used)}` : "";
   }
@@ -632,11 +672,87 @@
     const s = store.facts[factKey(f.a, f.b)];
     return s && s.last ? s.last.slice(-5).filter(x => !x).length : 0;
   }
-  function record(a, b, ok) {
+  function record(a, b, ok, ms = null) {
     const k = factKey(a, b);
     const s = store.facts[k] || (store.facts[k] = { r: 0, w: 0, last: [] });
     ok ? s.r++ : s.w++;
     s.last = [...(s.last || []), ok].slice(-8);
+    if (ms != null) s.t = [...(s.t || []), Math.round(ms)].slice(-8);
+  }
+
+  // ---------- Answer time ----------
+  // Time from the question appearing to pressing OK, for correct first attempts only.
+  // Typing takes time too, so each digit after the first gets a small allowance;
+  // otherwise "56" would look harder than "8" just because it has two digits.
+  // Times are dropped if the app was in the background during the question or
+  // if it took over a minute: the child was clearly doing something else.
+  const TYPE_MS = 350, MAX_MS = 60000;
+  function answerTime() {
+    if (!game || game.interrupted) return null;
+    const raw = performance.now() - game.qStart;
+    if (raw > MAX_MS) return null;
+    const digits = String(game.q.a * game.q.b).length;
+    return Math.max(300, raw - TYPE_MS * (digits - 1));
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden && game) game.interrupted = true; });
+
+  // ---------- Difficulty ----------
+  const median = (xs) => {
+    if (!xs.length) return null;
+    const v = [...xs].sort((x, y) => x - y), m = v.length >> 1;
+    return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+  };
+  // Scores every practised fact. Two signals:
+  //  - errors: share of misses among the last 6 answers (smoothed, so 1 miss of 1 is not "100 %")
+  //  - slowness: the fact's median time compared with the child's own typical time
+  // The typical time is the median over all facts, which is robust to the odd slow answer.
+  // Remaining outliers (over 4x typical, at least 8 s) are ignored, since the child was most
+  // likely distracted, and each fact uses the median of its last 5 times.
+  function analyse() {
+    const entries = Object.entries(store.facts).filter(([, s]) => s.last && s.last.length);
+    const pool = entries.flatMap(([, s]) => (s.t || []).slice(-5));
+    const base = pool.length >= 10 ? median(pool) : null;
+    const cap = base ? Math.max(8000, base * 4) : 20000;
+    const list = entries.map(([k, s]) => {
+      const [a, b] = k.split("×").map(Number);
+      const recent = s.last.slice(-6);
+      const misses = recent.filter(x => !x).length;
+      const all = (s.t || []).slice(-5);
+      const times = all.filter(t => t <= cap);
+      const med = median(times);
+      const ratio = base && med ? med / base : 1;
+      const errScore = 2 * misses / (recent.length + 1);
+      // Only clearly slower than usual counts: 1.2x typical gives 0, 2.2x gives 1. One timing counts less.
+      const slowScore = Math.min(1.5, Math.max(0, ratio - 1.2)) * (times.length >= 2 ? 1 : 0.6);
+      return { a, b, misses, n: recent.length, med, ratio, ignored: all.length - times.length,
+               score: errScore + slowScore };
+    }).sort((x, y) => y.score - x.score);
+    return { base, cap, list, ready: entries.length >= 8 && pool.length >= 10, answers: pool.length };
+  }
+  // Facts that clearly stand out as hard
+  const HARD = 0.25;
+  // The set to train: up to 10 clearly hard facts, topped up with the next hardest to at least 5
+  // so a session doesn't just repeat two or three facts over and over.
+  function hardestSet(an) {
+    const set = an.list.filter(x => x.score >= HARD).slice(0, 10);
+    for (const x of an.list) { if (set.length >= 5) break; if (!set.includes(x)) set.push(x); }
+    return set;
+  }
+  const fmtSec = (ms) => (ms / 1000).toFixed(1).replace(".", ",") + " s";
+
+  function renderHardCard() {
+    const an = analyse();
+    $("startHardest").disabled = !an.ready;
+    if (!an.ready) {
+      $("hardText").textContent = "Öva några omgångar först, så lär sig appen vilka tal som är svårast för dig.";
+      $("hardList").innerHTML = "";
+      return;
+    }
+    const top = an.list.filter(x => x.score >= HARD).slice(0, 6);
+    $("hardText").textContent = top.length
+      ? "Tränar på de tal du oftast svarar fel på eller behöver fundera längst på. Just nu:"
+      : "Inga tal sticker ut just nu. Du kan ändå träna på de som är lite svårare än de andra.";
+    $("hardList").innerHTML = top.map(x => `<span>${x.a} × ${x.b}</span>`).join("");
   }
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -683,7 +799,7 @@
     const tables = new Set(store.tables);
     game = {
       mode: "practice", tables, queue: [], right: 0, wrong: 0, streak: 0,
-      tries: 0, mustType: false,
+      tries: 0, mustType: false, today: new Map(),
       // Facts missed recently get one extra card per round (two if missed often)
       dealer: makeDealer(allFacts(), f => Math.min(2, recentMisses(f)))
     };
@@ -707,6 +823,23 @@
     timerId = setInterval(tick, 200);
   }
 
+  function startHardest() {
+    const an = analyse();
+    if (!an.ready) return;
+    const set = hardestSet(an);
+    const score = new Map(set.map(x => [factKey(x.a, x.b), x.score]));
+    game = {
+      mode: "hardest", tables: new Set(), queue: [], right: 0, wrong: 0, streak: 0,
+      tries: 0, mustType: false, total: 20, asked: 0,
+      focus: set.map(x => ({ a: x.a, b: x.b })), today: new Map(),
+      // The hardest of the hard get extra cards
+      dealer: makeDealer(set.map(x => ({ a: x.a, b: x.b })), f => {
+        const sc = score.get(factKey(f.a, f.b)); return sc >= 1 ? 2 : sc >= 0.5 ? 1 : 0;
+      })
+    };
+    show("play"); nextQuestion();
+  }
+
   function pickPractice() {
     // Missed questions come back after a couple of others
     game.queue.forEach(q => q.wait--);
@@ -719,7 +852,9 @@
   }
 
   function nextQuestion() {
-    if (game.mode === "practice") {
+    if (game.mode !== "challenge") {
+      if (game.mode === "hardest" && game.asked >= game.total) return endPractice();
+      game.asked = (game.asked || 0) + 1;
       game.tries = 0; game.mustType = false;
       showQuestion(pickPractice());
     } else {
@@ -732,6 +867,7 @@
   let input = "";
   function showQuestion(q) {
     game.q = q; input = "";
+    game.qStart = performance.now(); game.interrupted = document.hidden;
     $("qa").textContent = q.a; $("qb").textContent = q.b;
     setFeedback("", "");
     renderAnswer("");
@@ -749,9 +885,11 @@
   function renderStatus() {
     const s = $("statsLine"), bar = $("progressBar");
     $("play").dataset.mode = game.mode;
-    if (game.mode === "practice") {
-      bar.style.display = "none";
-      $("progressLabel").textContent = "";
+    if (game.mode !== "challenge") {
+      const hard = game.mode === "hardest";
+      bar.style.display = hard ? "" : "none";
+      bar.firstElementChild.style.width = hard ? `${((game.asked - 1) / game.total) * 100}%` : "0";
+      $("progressLabel").textContent = hard ? `Uppgift ${game.asked} av ${game.total}` : "";
       s.innerHTML = (game.streak >= 3 ? `<span class="stat streak"><b>${game.streak}</b> i rad</span>` : "")
         + `<span class="stat good"><b>${game.right}</b> rätt</span><span class="stat bad"><b>${game.wrong}</b> fel</span>`;
     } else {
@@ -790,14 +928,18 @@
     const { a, b } = game.q, correct = a * b, ok = +input === correct;
     const qEl = $("question");
 
-    if (game.mode === "practice") {
+    if (game.mode !== "challenge") {
+      const k = factKey(a, b);
       if (game.mustType) {
         if (ok) { renderAnswer("right"); setFeedback("Bra, nu sitter den lite bättre.", "good"); lockThen(700, nextQuestion); }
         else { renderAnswer("wrong"); animate(qEl, "shake"); input = ""; setTimeout(() => renderAnswer(""), 400); }
         return;
       }
       if (ok) {
-        if (game.tries === 0) { game.right++; game.streak++; record(a, b, true); }
+        if (game.tries === 0) {
+          game.right++; game.streak++; record(a, b, true, answerTime());
+          if (!game.today.has(k)) game.today.set(k, true);
+        }
         renderAnswer("right"); animate(qEl, "pop");
         setFeedback(praise(game.streak), "good");
         renderStatus(); save();
@@ -806,6 +948,7 @@
         game.tries++;
         if (game.tries === 1) {
           game.wrong++; game.streak = 0; record(a, b, false); save();
+          game.today.set(k, false);
           game.queue.push({ f: { a: Math.min(a, b), b: Math.max(a, b) }, wait: 3 });
           renderAnswer("wrong"); animate(qEl, "shake");
           setFeedback("Inte riktigt. Försök en gång till.", "bad");
@@ -820,7 +963,7 @@
       }
     } else {
       game.answered++;
-      record(a, b, ok);
+      record(a, b, ok, ok ? answerTime() : null);
       if (ok) { game.right++; renderAnswer("right"); setFeedback("Rätt!", "good"); }
       else {
         game.mistakes.push({ a, b, given: +input });
@@ -872,6 +1015,7 @@
       d.innerHTML = `<span>${x.a} × ${x.b} = ${x.a * x.b}</span><s>${x.given}</s>`;
       m.appendChild(d);
     });
+    $("mistakesTitle").textContent = "Öva lite mer på";
     $("mistakesCard").style.display = game.mistakes.length ? "" : "none";
     $("again").onclick = startChallenge;
     show("result");
@@ -883,11 +1027,22 @@
     game = null;
     if (!g || g.right + g.wrong === 0) return goHome();
     const total = g.right + g.wrong;
-    renderHero(g.right, total, "var(--calm)", g.wrong === 0 ? "Alla rätt direkt!" : "Bra övat!",
+    const hard = g.mode === "hardest";
+    renderHero(g.right, total, hard ? "var(--focus)" : "var(--calm)",
+      g.wrong === 0 ? "Alla rätt direkt!" : hard ? "Bra tränat!" : "Bra övat!",
       `${g.right} av ${total} rätt på första försöket.`, "");
-    $("mistakesCard").style.display = "none";
-    $("again").onclick = startPractice;
+    if (hard) {
+      // How each of the hard facts went today
+      $("mistakesTitle").textContent = "Så gick det med dina svåraste";
+      $("mistakes").innerHTML = g.focus.filter(f => g.today.has(factKey(f.a, f.b))).map(f => {
+        const ok = g.today.get(factKey(f.a, f.b));
+        return `<div class="mistake ${ok ? "ok" : "miss"}"><span>${f.a} × ${f.b} = ${f.a * f.b}</span><span class="tag">${ok ? "Rätt" : "Öva mer"}</span></div>`;
+      }).join("");
+      $("mistakesCard").style.display = "";
+    } else $("mistakesCard").style.display = "none";
+    $("again").onclick = hard ? startHardest : startPractice;
     show("result");
+    if (hard && total >= 10 && g.wrong === 0) confetti();
   }
 
   function renderHero(value, total, color, title, text, extra) {
@@ -965,6 +1120,7 @@
         cell(a * b, cls);
       }
     }
+    renderHardStats();
     const h = $("historyWrap");
     if (!store.history.length) { h.innerHTML = `<p class="empty-note">Inga utmaningar ännu.</p>`; return; }
     const rows = store.history.slice(0, 10).map(x => {
@@ -975,12 +1131,29 @@
     h.innerHTML = `<table class="history"><tr><th>Datum</th><th>Tabeller</th><th>Rätt</th><th>Tid</th></tr>${rows}</table>`;
   }
 
+  function renderHardStats() {
+    const an = analyse(), w = $("hardWrap");
+    if (!an.ready) {
+      w.innerHTML = `<p class="empty-note">Inte tillräckligt med svar än (${an.answers} av 10 tidtagna svar).</p>`;
+      return;
+    }
+    const rows = an.list.filter(x => x.score >= HARD).slice(0, 8).map(x => `<tr>
+        <td><b>${x.a} × ${x.b}</b></td>
+        <td>${x.misses} av ${x.n}</td>
+        <td class="${x.ratio >= 1.5 ? "slow" : ""}">${x.med ? fmtSec(x.med) : "–"}</td></tr>`).join("");
+    w.innerHTML = (rows
+      ? `<table class="history hard-table"><tr><th>Tal</th><th>Fel senaste</th><th>Svarstid</th></tr>${rows}</table>`
+      : `<p class="empty-note">Inga tal sticker ut just nu. Snyggt!</p>`)
+      + `<p class="stats-note">Vanlig svarstid: ${fmtSec(an.base)}. Svar som tar längre än ${fmtSec(an.cap)} räknas inte, eftersom man då troligen gjorde något annat.</p>`;
+  }
+
   // ---------- Wiring ----------
   $("startPractice").onclick = startPractice;
   $("startChallenge").onclick = startChallenge;
+  $("startHardest").onclick = startHardest;
   $("quit").onclick = () => {
     if (!game) return goHome();
-    if (game.mode === "practice") return endPractice();
+    if (game.mode !== "challenge") return endPractice();
     if (confirm("Vill du avsluta utmaningen?")) goHome();
   };
   $("toHome").onclick = goHome;
