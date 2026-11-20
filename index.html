@@ -43,7 +43,7 @@
     font-feature-settings: "tnum" 1;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; }
+  html, body { margin: 0; height: 100%; -webkit-text-size-adjust: 100%; }
   body {
     background: var(--paper);
     color: var(--ink);
@@ -97,13 +97,13 @@
   .btn.outline { background: var(--surface); border: 1.5px solid var(--line-2); }
 
   /* ---------- Home ---------- */
-  .brand { display: flex; align-items: center; gap: 14px; flex: 1; }
+  .brand { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
   .logo {
     width: 48px; height: 48px; border-radius: 13px; background: var(--ink);
     display: flex; align-items: center; justify-content: center; flex: none;
   }
   .logo svg { width: 22px; height: 22px; stroke: var(--gold); stroke-width: 4; stroke-linecap: round; }
-  .brand h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.6px; }
+  .brand h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -.6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .results-btn {
     height: 48px; padding: 0 18px 0 14px; border-radius: 999px;
     border: 1.5px solid var(--line-2); background: var(--surface);
@@ -163,7 +163,8 @@
   #play[data-mode="challenge"] { --mode: var(--fast); --mode-tint: var(--fast-tint); }
   .play-bar { display: flex; align-items: center; gap: 16px; }
   .play-bar .middle { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-  .play-bar .label { font-size: 15px; font-weight: 600; color: var(--ink-2); }
+  .play-bar .middle { min-width: 0; }
+  .play-bar .label { font-size: 15px; font-weight: 600; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .progress { height: 8px; background: var(--none); border-radius: 999px; overflow: hidden; }
   .progress > div { height: 100%; width: 0; background: var(--mode); border-radius: 999px; transition: width .3s ease; }
   .stats-line { display: flex; gap: 8px; }
@@ -183,7 +184,7 @@
   .play-main { flex: 1; display: flex; flex-direction: column; gap: 24px; }
   .question-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; min-height: 180px; }
   .question {
-    font-size: clamp(64px, 12vw, 112px); font-weight: 800; letter-spacing: -2px; line-height: 1;
+    font-size: clamp(36px, min(13vw, 11dvh), 112px); font-weight: 800; letter-spacing: -.02em; line-height: 1;
     display: flex; align-items: center; gap: .22em;
   }
   .question .op { color: var(--mode); font-weight: 700; }
@@ -219,7 +220,7 @@
 
   .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 480px; margin: 0 auto; }
   .key {
-    height: clamp(64px, 9vh, 84px); border-radius: var(--r-md);
+    height: clamp(46px, 8.5dvh, 84px); border-radius: var(--r-md);
     background: var(--surface); border: 1.5px solid var(--line);
     font-size: 32px; font-weight: 600;
     display: flex; align-items: center; justify-content: center;
@@ -231,12 +232,92 @@
   .key.ok { background: var(--mode); border-color: var(--mode); color: #fff; font-size: 24px; font-weight: 700; letter-spacing: .02em; }
   .key.ok:active { filter: brightness(.88); }
 
-  @media (orientation: landscape) and (min-width: 900px) {
+  /* Landscape (iPad and phone): question left, keypad right */
+  @media (orientation: landscape) and (min-width: 640px) {
     #play { max-width: 1180px; }
-    .play-main { flex-direction: row; align-items: center; gap: 40px; }
+    .play-main { flex-direction: row; align-items: center; gap: clamp(24px, 4vw, 48px); }
     .play-main .question-wrap { min-height: 0; min-width: 0; }
-    .question { font-size: clamp(56px, 7.6vw, 104px); }
-    .play-main .keypad { flex: none; width: 360px; margin: 0; }
+    .question { font-size: clamp(40px, min(7.6vw, 16dvh), 104px); }
+    .play-main .keypad { flex: none; width: clamp(240px, 34vw, 380px); margin: 0; }
+    .key { height: clamp(40px, calc((100dvh - 150px) / 4), 84px); }
+  }
+
+  /* ---------- Phone ---------- */
+  @media (max-width: 560px) {
+    .screen {
+      gap: 20px;
+      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    .bar { gap: 12px; }
+    .logo { width: 40px; height: 40px; border-radius: 11px; }
+    .logo svg { width: 18px; height: 18px; }
+    .brand { gap: 12px; }
+    .brand h1 { font-size: 22px; letter-spacing: -.4px; }
+    .results-btn { height: 44px; padding: 0 14px 0 12px; font-size: 15px; }
+    .hero h2 { font-size: 26px; letter-spacing: -.5px; }
+    .hero p { font-size: 16px; }
+    .chips { gap: 6px; margin-top: 10px; }
+    .chip { font-size: 22px; border-radius: 12px; }
+    .modes { gap: 12px; }
+    .mode { padding: 20px; gap: 12px; }
+    .mode-icon { width: 44px; height: 44px; }
+    .mode-icon .icon { width: 22px; height: 22px; }
+    .mode h3 { font-size: 21px; }
+    .mode p { font-size: 15px; }
+    .stepper { height: 44px; }
+    .stepper button { width: 44px; }
+    .stepper output { min-width: 52px; font-size: 18px; }
+    .btn { height: 54px; font-size: 18px; padding: 0 12px; white-space: nowrap; }
+    .panel { padding: 18px; border-radius: 16px; }
+
+    #play { gap: 12px; }
+    .play-bar { gap: 10px; }
+    .icon-btn { width: 44px; height: 44px; }
+    .play-bar .label { font-size: 14px; }
+    .stats-line { gap: 6px; }
+    .stat { height: 40px; padding: 0 12px; font-size: 14px; gap: 4px; }
+    .stat b { font-size: 17px; }
+    .stat.timer { min-width: 88px; font-size: 17px; }
+    .stat.timer .icon { width: 18px; height: 18px; }
+    .play-main { gap: 16px; }
+    .question-wrap { gap: 12px; min-height: 120px; }
+    .question { gap: .16em; }
+    .answer-box { border-radius: 14px; border-width: 2.5px; }
+    .feedback { font-size: 18px; }
+    .keypad { gap: 8px; }
+    .key { font-size: 26px; border-radius: 12px; }
+    .key.ok { font-size: 20px; }
+    .key.erase .icon { width: 26px; height: 26px; }
+
+    .result-hero { padding: 28px 18px; }
+    .ring { width: 136px; height: 136px; margin-bottom: 8px; }
+    .ring .value b { font-size: 42px; }
+    .ring .value span { font-size: 14px; }
+    .result-hero h2 { font-size: 24px; }
+    .result-hero p { font-size: 16px; }
+    .mistake { font-size: 17px; padding: 8px 12px; }
+    .actions { gap: 10px; }
+
+    .facts { gap: 3px; }
+    .facts div { border-radius: 5px; font-size: clamp(10px, 3vw, 14px); }
+    .facts .h { font-size: clamp(11px, 3.2vw, 15px); }
+    .legend { gap: 6px 14px; font-size: 14px; }
+    .history { font-size: 14px; }
+    .history td, .history th { padding: 10px 2px; }
+    .history th { font-size: 11px; }
+  }
+  @media (max-width: 400px) {
+    .results-btn { width: 44px; padding: 0; justify-content: center; }
+    .results-btn span { display: none; }
+    .history .opt { display: none; }
+  }
+  /* Short landscape phones: tighten vertical spacing */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .screen { gap: 12px; padding-top: max(12px, env(safe-area-inset-top)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+    .icon-btn { width: 40px; height: 40px; }
+    .stat { height: 36px; }
+    .bar, .play-bar { min-height: 40px; }
+    .keypad { gap: 6px; }
   }
 
   /* ---------- Result ---------- */
@@ -267,7 +348,7 @@
   .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
   /* ---------- Stats ---------- */
-  .facts { display: grid; grid-template-columns: repeat(11, minmax(30px, 1fr)); gap: 5px; }
+  .facts { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 5px; }
   .facts div {
     aspect-ratio: 1; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
@@ -283,7 +364,7 @@
   .legend span { display: inline-flex; align-items: center; gap: 8px; }
   .legend i { width: 16px; height: 16px; border-radius: 5px; }
   .history { width: 100%; border-collapse: collapse; font-size: 16px; }
-  .history td, .history th { padding: 12px 4px; text-align: left; border-bottom: 1px solid var(--line); }
+  .history td, .history th { padding: 12px 4px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
   .history tr:last-child td { border-bottom: 0; }
   .history th { color: var(--ink-2); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
   .empty-note { margin: 0; color: var(--ink-2); font-size: 16px; }
@@ -319,7 +400,7 @@
       <h1>Gångertabellen</h1>
     </div>
     <button class="results-btn" id="openStats">
-      <svg class="icon"><use href="#i-chart"/></svg>Resultat
+      <svg class="icon"><use href="#i-chart"/></svg><span>Resultat</span>
     </button>
   </div>
 
@@ -889,7 +970,7 @@
     const rows = store.history.slice(0, 10).map(x => {
       const d = new Date(x.date);
       const tables = x.tables.length === 10 ? "Alla" : x.tables.join(", ");
-      return `<tr><td>${d.getDate()}/${d.getMonth() + 1}</td><td>${tables}</td><td><b>${x.right}</b> / ${x.count}</td><td>${fmtTime(x.used)} / ${fmtTime(x.time)}</td></tr>`;
+      return `<tr><td>${d.getDate()}/${d.getMonth() + 1}</td><td>${tables}</td><td><b>${x.right}</b> / ${x.count}</td><td>${fmtTime(x.used)}<span class="opt"> / ${fmtTime(x.time)}</span></td></tr>`;
     }).join("");
     h.innerHTML = `<table class="history"><tr><th>Datum</th><th>Tabeller</th><th>Rätt</th><th>Tid</th></tr>${rows}</table>`;
   }
