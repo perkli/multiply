@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Gånger">
+<meta name="theme-color" content="#fff7ea">
+<title>Gångertabellen</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  :root {
+    --bg: #fff7ea;
+    --card: #ffffff;
+    --ink: #2b2a3a;
+    --muted: #6f6c80;
+    --line: #ece4d6;
+    --accent: #5b5bd6;
+    --accent-ink: #ffffff;
+    --accent-soft: #e6e6fb;
+    --warm: #ff8a3d;
+    --warm-soft: #ffe7d6;
+    --good: #22a06b;
+    --good-soft: #d7f5e6;
+    --bad: #e5484d;
+    --bad-soft: #fde2e3;
+    --mid: #f5b400;
+    --mid-soft: #fff1c2;
+    --none: #eeeaf2;
+    --radius: 22px;
+    --shadow: 0 2px 0 rgba(43, 42, 58, .06), 0 8px 24px rgba(43, 42, 58, .06);
+    font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-user-select: none; user-select: none;
+    touch-action: manipulation;
+    overscroll-behavior: none;
+  }
+  button { font: inherit; color: inherit; border: 0; cursor: pointer; touch-action: manipulation; }
+  .screen {
+    display: none;
+    min-height: 100dvh;
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    max-width: 900px;
+    margin: 0 auto;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .screen.active { display: flex; }
+
+  h1 { font-size: clamp(34px, 5vw, 48px); margin: 8px 0 0; letter-spacing: -.5px; }
+  h1 span { color: var(--warm); }
+  h2 { font-size: 22px; margin: 0 0 12px; }
+  .sub { color: var(--muted); margin: 4px 0 0; font-size: 18px; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .spread { justify-content: space-between; }
+
+  /* Table chips */
+  .chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .chip {
+    height: 64px; border-radius: 18px;
+    background: var(--none); color: var(--muted);
+    font-size: 28px; font-weight: 700;
+    transition: transform .08s, background .15s;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .chip:active { transform: scale(.95); }
+  .link-btn {
+    background: none; color: var(--accent); font-weight: 600; font-size: 17px; padding: 6px 4px;
+  }
+
+  /* Mode cards */
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 640px) { .modes { grid-template-columns: 1fr; } }
+  .mode { display: flex; flex-direction: column; gap: 14px; }
+  .mode .emoji { font-size: 40px; line-height: 1; }
+  .mode p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.35; }
+  .mode .grow { flex: 1; }
+  .big-btn {
+    height: 64px; border-radius: 18px;
+    background: var(--accent); color: var(--accent-ink);
+    font-size: 22px; font-weight: 700;
+    box-shadow: 0 4px 0 #3f3fb0;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .big-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #3f3fb0; }
+  .big-btn.warm { background: var(--warm); box-shadow: 0 4px 0 #d9661c; }
+  .big-btn.warm:active { box-shadow: 0 1px 0 #d9661c; }
+  .big-btn:disabled { opacity: .4; }
+
+  .setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .setting label { font-size: 18px; font-weight: 600; }
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .stepper button {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--warm-soft); color: #b5520f; font-size: 28px; font-weight: 700;
+  }
+  .stepper button:active { transform: scale(.94); }
+  .stepper output { min-width: 78px; text-align: center; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .record { font-size: 16px; color: var(--muted); min-height: 1.2em; }
+
+  .footer-links { display: flex; justify-content: center; gap: 12px; }
+  .ghost-btn {
+    background: var(--card); box-shadow: var(--shadow);
+    border-radius: 16px; padding: 14px 22px; font-size: 18px; font-weight: 600;
+  }
+  .ghost-btn:active { transform: scale(.97); }
+
+  /* Play screen */
+  #play { gap: 14px; }
+  .topbar { display: flex; align-items: center; gap: 12px; }
+  .topbar .ghost-btn { padding: 10px 16px; font-size: 17px; }
+  .stats-line { flex: 1; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+  .pill {
+    background: var(--card); box-shadow: var(--shadow);
+    border-radius: 999px; padding: 8px 14px; font-size: 18px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .pill.good { color: var(--good); }
+  .pill.bad { color: var(--bad); }
+  .pill.time.low { background: var(--bad-soft); color: var(--bad); }
+  .progress { height: 12px; background: var(--none); border-radius: 999px; overflow: hidden; }
+  .progress > div { height: 100%; width: 0; background: var(--warm); border-radius: 999px; transition: width .3s; }
+
+  .question-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px; min-height: 160px; }
+  .question {
+    font-size: clamp(56px, 11vw, 104px); font-weight: 800;
+    display: flex; align-items: center; gap: .25em;
+    font-variant-numeric: tabular-nums;
+  }
+  .question .times { color: var(--warm); }
+  .answer-box {
+    min-width: 2.2em; padding: 0 .2em; height: 1.3em;
+    border-radius: 24px; background: var(--card); box-shadow: var(--shadow);
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 4px solid var(--line);
+    transition: border-color .15s, background .15s;
+  }
+  .answer-box.empty::after { content: "?"; color: #cfc8dc; }
+  .answer-box.right { border-color: var(--good); background: var(--good-soft); }
+  .answer-box.wrong { border-color: var(--bad); background: var(--bad-soft); }
+  .feedback { font-size: 24px; font-weight: 700; min-height: 1.4em; text-align: center; }
+  .feedback.good { color: var(--good); }
+  .feedback.bad { color: var(--bad); }
+  .feedback.info { color: var(--accent); }
+
+  .shake { animation: shake .35s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); } 40% { transform: translateX(10px); }
+    60% { transform: translateX(-6px); } 80% { transform: translateX(6px); }
+  }
+  .pop { animation: pop .3s; }
+  @keyframes pop { 50% { transform: scale(1.08); } }
+
+  .keypad {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    width: 100%; max-width: 520px; margin: 0 auto;
+  }
+  .key {
+    height: clamp(64px, 9vh, 88px); border-radius: 20px;
+    background: var(--card); box-shadow: 0 4px 0 var(--line);
+    font-size: 36px; font-weight: 700;
+    transition: transform .06s, box-shadow .06s;
+  }
+  .key:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }
+  .key.erase { background: var(--warm-soft); box-shadow: 0 4px 0 #f3c9a8; color: #b5520f; }
+  .key.ok { background: var(--good); color: #fff; box-shadow: 0 4px 0 #17794f; }
+  .key.ok:active { box-shadow: 0 1px 0 #17794f; }
+
+  /* Result */
+  .result-hero { text-align: center; padding: 28px 20px; }
+  .result-hero .emoji { font-size: 72px; }
+  .result-hero .score { font-size: 64px; font-weight: 800; margin: 6px 0; }
+  .result-hero .score small { font-size: 28px; color: var(--muted); font-weight: 700; }
+  .result-hero p { font-size: 20px; color: var(--muted); margin: 6px 0; }
+  .result-hero .badge {
+    display: inline-block; margin-top: 10px; padding: 8px 16px; border-radius: 999px;
+    background: var(--mid-soft); color: #8a6500; font-weight: 700; font-size: 18px;
+  }
+  .mistakes { display: flex; flex-wrap: wrap; gap: 10px; }
+  .mistake {
+    background: var(--bad-soft); border-radius: 14px; padding: 10px 14px; font-size: 20px; font-weight: 700;
+  }
+  .mistake s { color: var(--bad); font-weight: 600; margin-left: 6px; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* Overview */
+  .grid-wrap { overflow-x: auto; }
+  .facts { display: grid; grid-template-columns: repeat(11, minmax(34px, 1fr)); gap: 6px; }
+  .facts div {
+    aspect-ratio: 1; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: clamp(13px, 2.2vw, 18px);
+    font-variant-numeric: tabular-nums;
+  }
+  .facts .h { background: none; color: var(--warm); font-size: clamp(16px, 2.6vw, 22px); }
+  .facts .c0 { background: var(--none); color: #b3adbf; }
+  .facts .c1 { background: var(--bad-soft); color: #a3262a; }
+  .facts .c2 { background: var(--mid-soft); color: #8a6500; }
+  .facts .c3 { background: var(--good-soft); color: #136b46; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 16px; color: var(--muted); }
+  .legend i { display: inline-block; width: 18px; height: 18px; border-radius: 6px; vertical-align: -3px; margin-right: 6px; }
+  .history { width: 100%; border-collapse: collapse; font-size: 17px; }
+  .history td, .history th { padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--line); }
+  .history th { color: var(--muted); font-weight: 600; }
+  .danger { color: var(--bad); }
+
+  .confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 10; }
+  .confetti span { position: absolute; top: -40px; font-size: 32px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+</style>
+</head>
+<body>
+
+<!-- ============ START ============ -->
+<section id="home" class="screen active">
+  <header>
+    <h1>Gånger<span>tabellen</span></h1>
+    <p class="sub">Välj tabeller och sätt igång!</p>
+  </header>
+
+  <div class="card">
+    <div class="row spread">
+      <h2 style="margin:0">Vilka tabeller vill du öva på?</h2>
+      <div class="row" style="gap:4px">
+        <button class="link-btn" id="selAll">Alla</button>
+        <button class="link-btn" id="selNone">Inga</button>
+      </div>
+    </div>
+    <div class="chips" id="chips" style="margin-top:14px"></div>
+  </div>
+
+  <div class="modes">
+    <div class="card mode">
+      <div class="emoji">🐢</div>
+      <h2 style="margin:0">Lugn övning</h2>
+      <p class="grow">Ingen tid, ingen stress. Svarar du fel får du försöka igen, och svåra tal kommer tillbaka lite senare.</p>
+      <button class="big-btn" id="startPractice">Börja öva</button>
+    </div>
+
+    <div class="card mode">
+      <div class="emoji">⏱️</div>
+      <h2 style="margin:0">Tidsutmaning</h2>
+      <div class="setting">
+        <label>Uppgifter</label>
+        <div class="stepper">
+          <button data-step="count" data-dir="-1" aria-label="Färre uppgifter">−</button>
+          <output id="countOut">30</output>
+          <button data-step="count" data-dir="1" aria-label="Fler uppgifter">+</button>
+        </div>
+      </div>
+      <div class="setting">
+        <label>Tid</label>
+        <div class="stepper">
+          <button data-step="time" data-dir="-1" aria-label="Kortare tid">−</button>
+          <output id="timeOut">3:00</output>
+          <button data-step="time" data-dir="1" aria-label="Längre tid">+</button>
+        </div>
+      </div>
+      <div class="record" id="recordLine"></div>
+      <button class="big-btn warm" id="startChallenge">Starta utmaningen</button>
+    </div>
+  </div>
+
+  <div class="footer-links">
+    <button class="ghost-btn" id="openStats">📊 Hur går det?</button>
+  </div>
+</section>
+
+<!-- ============ PLAY ============ -->
+<section id="play" class="screen">
+  <div class="topbar">
+    <button class="ghost-btn" id="quit">✕ Avsluta</button>
+    <div class="stats-line" id="statsLine"></div>
+  </div>
+  <div class="progress" id="progressBar"><div></div></div>
+
+  <div class="question-wrap">
+    <div class="question" id="question">
+      <span id="qa">7</span><span class="times">×</span><span id="qb">8</span><span>=</span>
+      <span class="answer-box empty" id="answer"></span>
+    </div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="keypad" id="keypad"></div>
+</section>
+
+<!-- ============ RESULT ============ -->
+<section id="result" class="screen">
+  <div class="card result-hero" id="resultHero"></div>
+  <div class="card" id="mistakesCard">
+    <h2>Dessa kan du öva lite mer på</h2>
+    <div class="mistakes" id="mistakes"></div>
+  </div>
+  <div class="actions">
+    <button class="ghost-btn" id="toHome">🏠 Till start</button>
+    <button class="big-btn warm" id="again">Igen!</button>
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<section id="stats" class="screen">
+  <div class="topbar">
+    <button class="ghost-btn" id="statsBack">← Tillbaka</button>
+  </div>
+  <div class="card">
+    <h2>Så här bra sitter talen</h2>
+    <div class="grid-wrap"><div class="facts" id="facts"></div></div>
+    <div class="legend" style="margin-top:14px">
+      <span><i style="background:var(--good-soft)"></i>Sitter bra</span>
+      <span><i style="background:var(--mid-soft)"></i>Nästan</span>
+      <span><i style="background:var(--bad-soft)"></i>Öva mer</span>
+      <span><i style="background:var(--none)"></i>Inte övat än</span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Senaste tidsutmaningarna</h2>
+    <div id="historyWrap"></div>
+  </div>
+  <div class="footer-links">
+    <button class="link-btn danger" id="resetAll">Nollställ all statistik</button>
+  </div>
+</section>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- Storage (fails safely, e.g. in private mode) ----------
+  const KEY = "gangertabellen.v1";
+  const defaults = {
+    tables: [1,2,3,4,5,6,7,8,9,10],
+    count: 30,
+    time: 180,
+    facts: {},     // "a×b" (a<=b) -> { r: right, w: wrong, last: [true,false,...] }
+    history: [],   // { date, tables, count, time, right, answered, used }
+    records: {}    // settingsKey -> { right, used }
+  };
+  let store;
+  try { store = Object.assign({}, defaults, JSON.parse(localStorage.getItem(KEY) || "{}")); }
+  catch { store = Object.assign({}, defaults); }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {} };
+
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => {
+    document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+    if (id !== "result") document.querySelectorAll(".confetti").forEach(c => c.remove());
+    window.scrollTo(0, 0);
+  };
+  const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const factKey = (a, b) => a <= b ? `${a}×${b}` : `${b}×${a}`;
+  const rand = (n) => Math.floor(Math.random() * n);
+
+  // ---------- Home ----------
+  const COUNT_STEPS = [5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+  const TIME_STEPS = [30, 60, 90, 120, 150, 180, 240, 300, 420, 600];
+
+  function renderChips() {
+    const wrap = $("chips");
+    wrap.innerHTML = "";
+    for (let t = 1; t <= 10; t++) {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = t;
+      b.setAttribute("aria-pressed", store.tables.includes(t));
+      b.onclick = () => {
+        store.tables = store.tables.includes(t)
+          ? store.tables.filter(x => x !== t)
+          : [...store.tables, t].sort((x, y) => x - y);
+        save(); renderHome();
+      };
+      wrap.appendChild(b);
+    }
+  }
+
+  const settingsKey = () => `${store.tables.join(",")}|${store.count}|${store.time}`;
+
+  function renderHome() {
+    renderChips();
+    $("countOut").textContent = store.count;
+    $("timeOut").textContent = fmtTime(store.time);
+    const none = store.tables.length === 0;
+    $("startPractice").disabled = none;
+    $("startChallenge").disabled = none;
+    const rec = store.records[settingsKey()];
+    $("recordLine").textContent = none ? "Välj minst en tabell först."
+      : rec ? `🏆 Rekord med de här inställningarna: ${rec.right} rätt på ${fmtTime(rec.used)}` : "";
+  }
+
+  function nearestIndex(steps, v) {
+    let best = 0;
+    steps.forEach((s, i) => { if (Math.abs(s - v) < Math.abs(steps[best] - v)) best = i; });
+    return best;
+  }
+  document.querySelectorAll("[data-step]").forEach(btn => {
+    btn.onclick = () => {
+      const which = btn.dataset.step, dir = +btn.dataset.dir;
+      const steps = which === "count" ? COUNT_STEPS : TIME_STEPS;
+      const i = Math.max(0, Math.min(steps.length - 1, nearestIndex(steps, store[which]) + dir));
+      store[which] = steps[i];
+      save(); renderHome();
+    };
+  });
+  $("selAll").onclick = () => { store.tables = [1,2,3,4,5,6,7,8,9,10]; save(); renderHome(); };
+  $("selNone").onclick = () => { store.tables = []; save(); renderHome(); };
+
+  // ---------- Facts ----------
+  function allFacts() {
+    const seen = new Set(), list = [];
+    for (const t of store.tables) for (let b = 1; b <= 10; b++) {
+      const k = factKey(t, b);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      list.push({ t, b });
+    }
+    return list;
+  }
+  function present(f) {
+    // Usually show the chosen table first, sometimes flipped so both orders get practised
+    return Math.random() < 0.7 ? { a: f.t, b: f.b } : { a: f.b, b: f.t };
+  }
+  function weight(f) {
+    const s = store.facts[factKey(f.t, f.b)];
+    if (!s) return 2;                         // not seen yet: a bit more likely
+    const recent = (s.last || []).slice(-5);
+    const misses = recent.filter(x => !x).length;
+    return 1 + misses * 2;
+  }
+  function record(a, b, ok) {
+    const k = factKey(a, b);
+    const s = store.facts[k] || (store.facts[k] = { r: 0, w: 0, last: [] });
+    ok ? s.r++ : s.w++;
+    s.last = [...(s.last || []), ok].slice(-8);
+  }
+
+  // ---------- Game state ----------
+  let game = null;
+  let timerId = null;
+
+  function startPractice() {
+    game = {
+      mode: "practice", facts: allFacts(), queue: [], right: 0, wrong: 0, streak: 0,
+      tries: 0, mustType: false, prevKey: null, mistakes: new Map()
+    };
+    show("play"); nextQuestion();
+  }
+
+  function startChallenge() {
+    const facts = allFacts();
+    const list = [];
+    let prev = null;
+    for (let i = 0; i < store.count; i++) {
+      let f, tries = 0;
+      do { f = facts[rand(facts.length)]; } while (facts.length > 1 && prev && factKey(f.t, f.b) === prev && ++tries < 10);
+      prev = factKey(f.t, f.b);
+      list.push(present(f));
+    }
+    game = {
+      mode: "challenge", list, i: 0, right: 0, answered: 0, mistakes: [],
+      total: store.count, time: store.time, start: performance.now(), locked: false, ended: false
+    };
+    show("play"); showQuestion(list[0]); tick();
+    timerId = setInterval(tick, 200);
+  }
+
+  function pickPractice() {
+    // Missed questions come back after a few others
+    game.queue.forEach(q => q.wait--);
+    const due = game.queue.findIndex(q => q.wait <= 0);
+    if (due >= 0) return game.queue.splice(due, 1)[0].q;
+    const facts = game.facts;
+    const weights = facts.map(f => factKey(f.t, f.b) === game.prevKey && facts.length > 1 ? 0 : weight(f));
+    let r = Math.random() * weights.reduce((x, y) => x + y, 0);
+    let i = 0;
+    while (r >= weights[i]) { r -= weights[i]; i++; }
+    return present(facts[Math.min(i, facts.length - 1)]);
+  }
+
+  function nextQuestion() {
+    if (game.mode === "practice") {
+      game.tries = 0; game.mustType = false;
+      const q = pickPractice();
+      game.prevKey = factKey(q.a, q.b);
+      showQuestion(q);
+    } else {
+      game.i++;
+      if (game.i >= game.total) return endChallenge();
+      showQuestion(game.list[game.i]);
+    }
+  }
+
+  let input = "";
+  function showQuestion(q) {
+    game.q = q; input = "";
+    $("qa").textContent = q.a; $("qb").textContent = q.b;
+    setFeedback("", "");
+    renderAnswer("");
+    renderStatus();
+  }
+  function renderAnswer(state) {
+    const box = $("answer");
+    box.textContent = input;
+    box.className = "answer-box" + (input === "" ? " empty" : "") + (state ? " " + state : "");
+  }
+  function setFeedback(text, cls) {
+    const f = $("feedback");
+    f.textContent = text; f.className = "feedback " + cls;
+  }
+  function renderStatus() {
+    const s = $("statsLine"), bar = $("progressBar");
+    if (game.mode === "practice") {
+      bar.style.display = "none";
+      s.innerHTML = `<span class="pill good">✓ ${game.right}</span><span class="pill bad">✗ ${game.wrong}</span>`
+        + (game.streak >= 3 ? `<span class="pill">🔥 ${game.streak} i rad</span>` : "");
+    } else {
+      bar.style.display = "";
+      bar.firstElementChild.style.width = `${(game.answered / game.total) * 100}%`;
+      s.innerHTML = `<span class="pill">${Math.min(game.i + 1, game.total)} / ${game.total}</span>`
+        + `<span class="pill good">✓ ${game.right}</span><span class="pill time" id="timePill"></span>`;
+      tick();
+    }
+  }
+  function tick() {
+    if (!game || game.mode !== "challenge" || game.ended) return;
+    const left = Math.max(0, game.time - (performance.now() - game.start) / 1000);
+    const pill = $("timePill");
+    if (pill) {
+      pill.textContent = "⏱ " + fmtTime(Math.ceil(left));
+      pill.classList.toggle("low", left <= 10);
+    }
+    if (left <= 0) endChallenge();
+  }
+
+  function press(k) {
+    if (!game || game.locked) return;
+    if (k === "⌫") input = input.slice(0, -1);
+    else if (k === "OK") return submit();
+    else if (input.length < 3) input = (input === "0" ? "" : input) + k;
+    renderAnswer("");
+  }
+
+  function animate(el, cls) {
+    el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  }
+
+  function submit() {
+    if (input === "") return;
+    const { a, b } = game.q, correct = a * b, ok = +input === correct;
+    const qEl = $("question");
+
+    if (game.mode === "practice") {
+      if (game.mustType) {
+        if (ok) { renderAnswer("right"); setFeedback("Bra! Nu sitter den lite bättre.", "good"); lockThen(700, nextQuestion); }
+        else { renderAnswer("wrong"); animate(qEl, "shake"); input = ""; setTimeout(() => renderAnswer(""), 400); }
+        return;
+      }
+      if (ok) {
+        if (game.tries === 0) { game.right++; game.streak++; record(a, b, true); }
+        renderAnswer("right"); animate(qEl, "pop");
+        setFeedback(praise(game.streak), "good");
+        renderStatus(); save();
+        lockThen(650, nextQuestion);
+      } else {
+        game.tries++;
+        if (game.tries === 1) {
+          game.wrong++; game.streak = 0; record(a, b, false); save();
+          game.queue.push({ q: { a, b }, wait: 3 });
+          renderAnswer("wrong"); animate(qEl, "shake");
+          setFeedback("Inte riktigt – försök en gång till!", "bad");
+          renderStatus();
+          lockThen(600, () => { input = ""; renderAnswer(""); });
+        } else {
+          renderAnswer("wrong"); animate(qEl, "shake");
+          setFeedback(`${a} × ${b} = ${correct}. Skriv in svaret!`, "info");
+          game.mustType = true;
+          lockThen(700, () => { input = ""; renderAnswer(""); });
+        }
+      }
+    } else {
+      game.answered++;
+      record(a, b, ok);
+      if (ok) { game.right++; renderAnswer("right"); setFeedback("Rätt!", "good"); }
+      else {
+        game.mistakes.push({ a, b, given: +input });
+        renderAnswer("wrong"); animate(qEl, "shake");
+        setFeedback(`${a} × ${b} = ${correct}`, "bad");
+      }
+      renderStatus();
+      lockThen(ok ? 300 : 1100, nextQuestion);
+    }
+  }
+
+  function lockThen(ms, fn) {
+    game.locked = true;
+    const g = game;
+    setTimeout(() => { if (game === g && !g.ended) { g.locked = false; fn(); } }, ms);
+  }
+
+  const PRAISE = ["Rätt!", "Snyggt!", "Bra jobbat!", "Toppen!", "Klockrent!", "Ja!", "Perfekt!"];
+  function praise(streak) {
+    if (streak > 0 && streak % 10 === 0) return `Wow, ${streak} rätt i rad! 🎉`;
+    if (streak === 5) return "Fem rätt i rad! 🔥";
+    return PRAISE[rand(PRAISE.length)];
+  }
+
+  function endChallenge() {
+    if (game.ended) return;
+    game.ended = true; game.locked = true;
+    clearInterval(timerId);
+    const used = Math.min(game.time, (performance.now() - game.start) / 1000);
+    const key = settingsKey();
+    const prev = store.records[key];
+    const isRecord = game.right > 0 && (!prev || game.right > prev.right || (game.right === prev.right && used < prev.used));
+    if (isRecord) store.records[key] = { right: game.right, used: Math.round(used) };
+    store.history = [{ date: Date.now(), tables: [...store.tables], count: game.total, time: game.time,
+      right: game.right, answered: game.answered, used: Math.round(used) }, ...store.history].slice(0, 30);
+    save();
+
+    const timeUp = game.answered < game.total;
+    const pct = game.right / game.total;
+    const emoji = pct === 1 ? "🏆" : pct >= .8 ? "🌟" : pct >= .5 ? "👍" : "💪";
+    const msg = pct === 1 ? "Alla rätt – helt otroligt!" : pct >= .8 ? "Riktigt bra jobbat!" : pct >= .5 ? "Bra kämpat!" : "Bra att du övar – det blir bättre varje gång!";
+    $("resultHero").innerHTML = `
+      <div class="emoji">${emoji}</div>
+      <div class="score">${game.right}<small> / ${game.total} rätt</small></div>
+      <p>${msg}</p>
+      <p>${timeUp ? `Tiden tog slut efter ${game.answered} svar.` : `Klar på ${fmtTime(Math.round(used))} av ${fmtTime(game.time)}.`}</p>
+      ${isRecord && prev ? `<div class="badge">🏆 Nytt rekord!</div>` : ""}`;
+    const m = $("mistakes");
+    m.innerHTML = "";
+    game.mistakes.forEach(x => {
+      const d = document.createElement("div");
+      d.className = "mistake";
+      d.innerHTML = `${x.a} × ${x.b} = ${x.a * x.b}<s>${x.given}</s>`;
+      m.appendChild(d);
+    });
+    $("mistakesCard").style.display = game.mistakes.length ? "" : "none";
+    $("again").onclick = startChallenge;
+    show("result");
+    if (pct >= .8) confetti();
+  }
+
+  function endPractice() {
+    const g = game;
+    game = null;
+    if (!g || g.right + g.wrong === 0) return goHome();
+    $("resultHero").innerHTML = `
+      <div class="emoji">${g.wrong === 0 ? "🌟" : "😊"}</div>
+      <div class="score">${g.right}<small> rätt direkt</small></div>
+      <p>Du övade på ${g.right + g.wrong} uppgifter. Bra jobbat!</p>`;
+    $("mistakesCard").style.display = "none";
+    $("again").onclick = startPractice;
+    show("result");
+  }
+
+  function goHome() {
+    clearInterval(timerId);
+    if (game) game.ended = true;
+    game = null;
+    renderHome(); show("home");
+  }
+
+  function confetti() {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    const items = ["🎉", "⭐", "✨", "🎊", "🌟"];
+    for (let i = 0; i < 28; i++) {
+      const s = document.createElement("span");
+      s.textContent = items[rand(items.length)];
+      s.style.left = Math.random() * 100 + "vw";
+      s.style.animationDuration = 1.8 + Math.random() * 1.6 + "s";
+      s.style.animationDelay = Math.random() * .6 + "s";
+      c.appendChild(s);
+    }
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4200);
+  }
+
+  // ---------- Keypad ----------
+  const kp = $("keypad");
+  ["1","2","3","4","5","6","7","8","9","⌫","0","OK"].forEach(k => {
+    const b = document.createElement("button");
+    b.className = "key" + (k === "⌫" ? " erase" : k === "OK" ? " ok" : "");
+    b.textContent = k;
+    b.setAttribute("aria-label", k === "⌫" ? "Sudda" : k === "OK" ? "Svara" : k);
+    // pointerdown feels snappier on iPad than click
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); press(k); });
+    kp.appendChild(b);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (!$("play").classList.contains("active")) return;
+    if (/^[0-9]$/.test(e.key)) press(e.key);
+    else if (e.key === "Backspace") press("⌫");
+    else if (e.key === "Enter") press("OK");
+  });
+
+  // ---------- Stats ----------
+  function renderStats() {
+    const g = $("facts");
+    g.innerHTML = "";
+    const cell = (text, cls) => { const d = document.createElement("div"); d.textContent = text; d.className = cls; g.appendChild(d); };
+    cell("×", "h");
+    for (let b = 1; b <= 10; b++) cell(b, "h");
+    for (let a = 1; a <= 10; a++) {
+      cell(a, "h");
+      for (let b = 1; b <= 10; b++) {
+        const s = store.facts[factKey(a, b)];
+        let cls = "c0";
+        if (s && s.last && s.last.length) {
+          const recent = s.last.slice(-5);
+          const acc = recent.filter(Boolean).length / recent.length;
+          cls = acc >= .85 && recent.length >= 2 ? "c3" : acc >= .6 ? "c2" : "c1";
+        }
+        cell(a * b, cls);
+      }
+    }
+    const h = $("historyWrap");
+    if (!store.history.length) { h.innerHTML = `<p class="sub" style="margin:0">Inga utmaningar ännu – testa en!</p>`; return; }
+    const rows = store.history.slice(0, 10).map(x => {
+      const d = new Date(x.date);
+      const tables = x.tables.length === 10 ? "Alla" : x.tables.join(", ");
+      return `<tr><td>${d.getDate()}/${d.getMonth() + 1}</td><td>${tables}</td><td><b>${x.right}</b> / ${x.count}</td><td>${fmtTime(x.used)} / ${fmtTime(x.time)}</td></tr>`;
+    }).join("");
+    h.innerHTML = `<table class="history"><tr><th>Datum</th><th>Tabeller</th><th>Rätt</th><th>Tid</th></tr>${rows}</table>`;
+  }
+
+  // ---------- Wiring ----------
+  $("startPractice").onclick = startPractice;
+  $("startChallenge").onclick = startChallenge;
+  $("quit").onclick = () => {
+    if (!game) return goHome();
+    if (game.mode === "practice") return endPractice();
+    if (confirm("Vill du avsluta utmaningen?")) goHome();
+  };
+  $("toHome").onclick = goHome;
+  $("openStats").onclick = () => { renderStats(); show("stats"); };
+  $("statsBack").onclick = goHome;
+  $("resetAll").onclick = () => {
+    if (!confirm("Vill du verkligen nollställa all statistik och alla rekord?")) return;
+    store.facts = {}; store.history = []; store.records = {};
+    save(); renderStats();
+  };
+
+  renderHome();
+
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
