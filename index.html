@@ -422,26 +422,27 @@
   $("selNone").onclick = () => { store.tables = []; save(); renderHome(); };
 
   // ---------- Facts ----------
+  // A fact is an unordered pair {a, b} with a <= b, so 3×7 and 7×3 are the same fact.
   function allFacts() {
     const seen = new Set(), list = [];
-    for (const t of store.tables) for (let b = 1; b <= 10; b++) {
-      const k = factKey(t, b);
+    for (const t of store.tables) for (let n = 1; n <= 10; n++) {
+      const a = Math.min(t, n), b = Math.max(t, n), k = factKey(a, b);
       if (seen.has(k)) continue;
       seen.add(k);
-      list.push({ t, b });
+      list.push({ a, b });
     }
     return list;
   }
-  function present(f) {
-    // Usually show the chosen table first, sometimes flipped so both orders get practised
-    return Math.random() < 0.7 ? { a: f.t, b: f.b } : { a: f.b, b: f.t };
+  function present(f, tables) {
+    // If only one factor is a chosen table, usually show it first ("7 × 4" when practising 7s).
+    // Otherwise either order is equally likely.
+    const inA = tables.has(f.a), inB = tables.has(f.b);
+    const aFirst = inA !== inB ? (Math.random() < 0.7) === inA : Math.random() < 0.5;
+    return aFirst ? { a: f.a, b: f.b } : { a: f.b, b: f.a };
   }
-  function weight(f) {
-    const s = store.facts[factKey(f.t, f.b)];
-    if (!s) return 2;                         // not seen yet: a bit more likely
-    const recent = (s.last || []).slice(-5);
-    const misses = recent.filter(x => !x).length;
-    return 1 + misses * 2;
+  function recentMisses(f) {
+    const s = store.facts[factKey(f.a, f.b)];
+    return s && s.last ? s.last.slice(-5).filter(x => !x).length : 0;
   }
   function record(a, b, ok) {
     const k = factKey(a, b);
@@ -449,28 +450,66 @@
     ok ? s.r++ : s.w++;
     s.last = [...(s.last || []), ok].slice(-8);
   }
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = rand(i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  const sharesFactor = (f, g) => f.a === g.a || f.a === g.b || f.b === g.a || f.b === g.b;
+
+  // Deals facts like a shuffled deck: every fact once per round before any repeats.
+  // `extras(f)` = how many extra cards a fact gets (used to repeat hard facts a bit more).
+  // When drawing, it avoids facts seen in the last few questions and, when possible,
+  // facts sharing a number with the previous question.
+  function makeDealer(facts, extras = () => 0) {
+    let deck = [];
+    const history = [];
+    const gap = Math.min(4, Math.floor(facts.length / 2));
+    const refill = () => {
+      deck = [];
+      for (const f of facts) for (let i = 0, n = 1 + extras(f); i < n; i++) deck.push(f);
+      shuffle(deck);
+    };
+    return {
+      draw() {
+        if (!deck.length) refill();
+        const prev = history[history.length - 1];
+        const recent = new Set(history.slice(-gap).map(f => factKey(f.a, f.b)));
+        const fresh = (f) => !recent.has(factKey(f.a, f.b));
+        let i = deck.findIndex(f => fresh(f) && !(prev && sharesFactor(f, prev)));
+        if (i < 0) i = deck.findIndex(fresh);
+        if (i < 0) i = 0;
+        return deck.splice(i, 1)[0];
+      },
+      seen(f) { history.push(f); if (history.length > 10) history.shift(); }
+    };
+  }
 
   // ---------- Game state ----------
   let game = null;
   let timerId = null;
 
   function startPractice() {
+    const tables = new Set(store.tables);
     game = {
-      mode: "practice", facts: allFacts(), queue: [], right: 0, wrong: 0, streak: 0,
-      tries: 0, mustType: false, prevKey: null, mistakes: new Map()
+      mode: "practice", tables, queue: [], right: 0, wrong: 0, streak: 0,
+      tries: 0, mustType: false,
+      // Facts missed recently get one extra card per round (two if missed often)
+      dealer: makeDealer(allFacts(), f => Math.min(2, recentMisses(f)))
     };
     show("play"); nextQuestion();
   }
 
   function startChallenge() {
-    const facts = allFacts();
+    const tables = new Set(store.tables);
+    const dealer = makeDealer(allFacts());
     const list = [];
-    let prev = null;
     for (let i = 0; i < store.count; i++) {
-      let f, tries = 0;
-      do { f = facts[rand(facts.length)]; } while (facts.length > 1 && prev && factKey(f.t, f.b) === prev && ++tries < 10);
-      prev = factKey(f.t, f.b);
-      list.push(present(f));
+      const f = dealer.draw();
+      dealer.seen(f);
+      list.push(present(f, tables));
     }
     game = {
       mode: "challenge", list, i: 0, right: 0, answered: 0, mistakes: [],
@@ -481,24 +520,20 @@
   }
 
   function pickPractice() {
-    // Missed questions come back after a few others
+    // Missed questions come back after a couple of others
     game.queue.forEach(q => q.wait--);
     const due = game.queue.findIndex(q => q.wait <= 0);
-    if (due >= 0) return game.queue.splice(due, 1)[0].q;
-    const facts = game.facts;
-    const weights = facts.map(f => factKey(f.t, f.b) === game.prevKey && facts.length > 1 ? 0 : weight(f));
-    let r = Math.random() * weights.reduce((x, y) => x + y, 0);
-    let i = 0;
-    while (r >= weights[i]) { r -= weights[i]; i++; }
-    return present(facts[Math.min(i, facts.length - 1)]);
+    let f;
+    if (due >= 0) f = game.queue.splice(due, 1)[0].f;
+    else f = game.dealer.draw();
+    game.dealer.seen(f);
+    return present(f, game.tables);
   }
 
   function nextQuestion() {
     if (game.mode === "practice") {
       game.tries = 0; game.mustType = false;
-      const q = pickPractice();
-      game.prevKey = factKey(q.a, q.b);
-      showQuestion(q);
+      showQuestion(pickPractice());
     } else {
       game.i++;
       if (game.i >= game.total) return endChallenge();
@@ -581,7 +616,7 @@
         game.tries++;
         if (game.tries === 1) {
           game.wrong++; game.streak = 0; record(a, b, false); save();
-          game.queue.push({ q: { a, b }, wait: 3 });
+          game.queue.push({ f: { a: Math.min(a, b), b: Math.max(a, b) }, wait: 3 });
           renderAnswer("wrong"); animate(qEl, "shake");
           setFeedback("Inte riktigt – försök en gång till!", "bad");
           renderStatus();
