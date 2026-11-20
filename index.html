@@ -563,20 +563,78 @@
 (() => {
   "use strict";
 
-  // ---------- Storage (fails safely, e.g. in private mode) ----------
+  // ---------- Storage ----------
+  // Saved results must survive every app update:
+  //  - KEY never changes. A new data shape is handled by bumping SCHEMA and adding a step to migrate().
+  //  - Every field is validated on its own, so one bad field never resets the rest.
+  //  - Unknown fields are kept, so an older cached version never deletes data a newer version saved.
+  //  - Before an upgrade, the previous data is copied to BACKUP_KEY.
   const KEY = "gangertabellen.v1";
-  const defaults = {
+  const BACKUP_KEY = "gangertabellen.backup";
+  const SCHEMA = 2;   // 1: original (no version field). 2: answer times per fact (facts[k].t)
+  const defaults = () => ({
+    schema: SCHEMA,
     tables: [1,2,3,4,5,6,7,8,9,10],
     count: 30,
     time: 180,
     facts: {},     // "a×b" (a<=b) -> { r, w, last: [true,false,...], t: [answer ms, ...] }
     history: [],   // { date, tables, count, time, right, answered, used }
     records: {}    // settingsKey -> { right, used }
-  };
-  let store;
-  try { store = Object.assign({}, defaults, JSON.parse(localStorage.getItem(KEY) || "{}")); }
-  catch { store = Object.assign({}, defaults); }
+  });
+
+  const isNum = (x) => typeof x === "number" && isFinite(x);
+  const numList = (x) => Array.isArray(x) ? x.filter(isNum) : [];
+  function cleanFact(f) {
+    if (!f || typeof f !== "object") return null;
+    const out = Object.assign({}, f);          // keep unknown fields
+    out.r = isNum(f.r) ? f.r : 0;
+    out.w = isNum(f.w) ? f.w : 0;
+    out.last = Array.isArray(f.last) ? f.last.filter(x => typeof x === "boolean") : [];
+    if ("t" in f) out.t = numList(f.t);
+    return out;
+  }
+  function migrate(raw) {
+    const d = defaults();
+    if (!raw || typeof raw !== "object") return d;
+    const out = Object.assign({}, raw);        // keep unknown fields
+    const tables = numList(raw.tables).filter(t => Number.isInteger(t) && t >= 1 && t <= 10);
+    out.tables = Array.isArray(raw.tables) ? [...new Set(tables)].sort((a, b) => a - b) : d.tables;
+    out.count = isNum(raw.count) && raw.count > 0 ? raw.count : d.count;
+    out.time = isNum(raw.time) && raw.time > 0 ? raw.time : d.time;
+    out.facts = {};
+    if (raw.facts && typeof raw.facts === "object") {
+      for (const [k, f] of Object.entries(raw.facts)) {
+        const c = cleanFact(f);
+        if (c && /^\d+×\d+$/.test(k)) out.facts[k] = c;
+      }
+    }
+    out.history = Array.isArray(raw.history) ? raw.history.filter(h => h && typeof h === "object" && Array.isArray(h.tables)) : [];
+    out.records = raw.records && typeof raw.records === "object" ? raw.records : {};
+    // Schema steps go here, e.g. if ((raw.schema || 1) < 3) { ... }
+    // 1 -> 2: nothing to convert; answer times are simply missing for old answers.
+    out.schema = Math.max(SCHEMA, isNum(raw.schema) ? raw.schema : 1);
+    return out;
+  }
+  function load() {
+    let text = null, raw = null;
+    try { text = localStorage.getItem(KEY); } catch {}
+    if (text) {
+      try { raw = JSON.parse(text); } catch {
+        // Unreadable: keep the original text aside instead of overwriting it
+        try { localStorage.setItem(BACKUP_KEY + ".unreadable", text); } catch {}
+      }
+    }
+    const data = migrate(raw);
+    if (raw && (raw.schema || 1) < SCHEMA) {
+      try { localStorage.setItem(BACKUP_KEY, text); } catch {}
+    }
+    return data;
+  }
+  const store = load();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {} };
+  save();
+  // Ask the browser not to clear saved results under storage pressure
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
 
   const $ = (id) => document.getElementById(id);
   const show = (id) => {

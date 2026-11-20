@@ -29,6 +29,16 @@ Talen delas ut som en blandad kortlek: varje tal kommer en gång per varv innan 
 Man väljer själv vilka tabeller som ingår. Under "Hur går det?" finns en färgkodad översikt över alla tal och en lista med de senaste utmaningarna.
 Allt sparas lokalt i webbläsaren (`localStorage`) på enheten.
 
+## Sparad data och uppdateringar
+Resultat och statistik sparas i webbläsarens `localStorage` under nyckeln `gangertabellen.v1` och ska överleva alla uppdateringar:
+- **Nyckeln byts aldrig.** Ändras dataformatet höjs `SCHEMA` i `index.html`, och ett migreringssteg läggs till i `migrate()`. Gamla data konverteras, de kastas aldrig.
+- **Varje fält kontrolleras för sig.** Ett trasigt fält återställs utan att resten påverkas. Data som inte går att läsa alls sparas undan i `gangertabellen.backup.unreadable` i stället för att skrivas över.
+- **Okända fält behålls.** En äldre cachad version av appen raderar alltså inte data som en nyare version har sparat.
+- **Säkerhetskopia:** före en uppgradering av dataformatet sparas en kopia av tidigare data i `gangertabellen.backup`.
+- **Skydd mot rensning:** appen ber webbläsaren att inte rensa lagringen (`navigator.storage.persist()`).
+
+Statistiken försvinner bara om appen tas bort från hemskärmen, om webbplatsdata rensas i Safari, eller om appen öppnas från en annan adress.
+
 ## Publicera med GitHub Pages
 1. Gå till *Settings → Pages* i repot.
 2. Välj *Deploy from a branch*, branch `main` och mappen `/ (root)`.
