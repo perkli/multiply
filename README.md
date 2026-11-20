@@ -7,7 +7,7 @@ Allt ligger i `index.html`, utan beroenden och utan byggsteg.
 - **Lugn övning:** ingen tid. Svarar man fel får man försöka igen. Efter två fel visas svaret och man skriver in det. Ett tal man svarat fel på kommer tillbaka efter ett par andra frågor, och tal man nyligen haft svårt med får ett extra kort i nästa varv.
 - **Tidsutmaning:** slumpade uppgifter på tid. Antal uppgifter (5–100) och tid (0:30–10:00) ställs in på startsidan. Omgången tar slut när alla uppgifter är klara eller när tiden är ute. Rekord sparas per inställning.
 
-- **Mina svåraste:** ett pass med 20 uppgifter på de tal man har svårast för, oavsett vilka tabeller som är valda. Blir tillgängligt när appen har sett minst 8 olika tal och 10 tidtagna svar.
+- **Mina svåraste:** ett pass med 20 uppgifter på de tal man har svårast för, oavsett vilka tabeller som är valda. Låses upp när appen har sett minst 8 olika tal och 10 tidtagna svar. Innan dess visas läget som låst, med en förloppsindikator och hur många svar som är kvar.
 
 ### Hur "svårast" räknas ut
 Appen mäter svarstiden för varje tal som besvaras rätt på första försöket, i alla lägen. Varje siffra efter den första ger ett avdrag på 0,35 s för skrivtiden, så att tvåsiffriga svar inte ser svårare ut bara för att de tar längre tid att skriva.

@@ -154,6 +154,15 @@
     padding: 4px 10px; font-size: 15px; font-weight: 700; color: var(--focus-dark);
   }
   @media (max-width: 640px) { .mode.focus { display: flex; flex-direction: column; align-items: stretch; } }
+  /* Locked until there is enough data */
+  .unlock { display: none; align-items: center; gap: 12px; margin-top: 2px; }
+  .mode.focus.locked .unlock { display: flex; }
+  .unlock-bar { flex: 1; max-width: 260px; height: 8px; border-radius: 999px; background: var(--surface); overflow: hidden; }
+  .unlock-bar div { height: 100%; width: 0; background: var(--focus); border-radius: 999px; transition: width .4s ease; }
+  .unlock span { font-size: 14px; font-weight: 700; color: var(--focus-dark); white-space: nowrap; }
+  .mode.focus.locked .mode-icon { background: #9aa6c6; }
+  .mode.focus.locked .btn:disabled { opacity: 1; background: transparent; color: var(--focus-dark); border: 1.5px dashed #9aa6c6; }
+  .btn .icon { width: 20px; height: 20px; }
   .mode-icon .icon { width: 26px; height: 26px; }
   .mode h3 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.4px; }
   .mode p { margin: 0; font-size: 16px; line-height: 1.45; color: #4a4741; }
@@ -414,6 +423,7 @@
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-erase" viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M12 9.5l5 5M17 9.5l-5 5"/></symbol>
   <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
   <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/></symbol>
 </svg>
 
@@ -487,8 +497,12 @@
           <h3>Mina svåraste</h3>
           <p id="hardText"></p>
           <div class="hard-list" id="hardList"></div>
+          <div class="unlock" id="unlock">
+            <div class="unlock-bar"><div id="unlockFill"></div></div>
+            <span id="unlockText"></span>
+          </div>
         </div>
-        <button class="btn focus" id="startHardest">Träna</button>
+        <button class="btn focus" id="startHardest"></button>
       </div>
     </div>
   </div>
@@ -766,6 +780,8 @@
   // The typical time is the median over all facts, which is robust to the odd slow answer.
   // Remaining outliers (over 4x typical, at least 8 s) are ignored, since the child was most
   // likely distracted, and each fact uses the median of its last 5 times.
+  // Data needed before "Mina svåraste" unlocks
+  const NEED_FACTS = 8, NEED_TIMES = 10;
   function analyse() {
     const entries = Object.entries(store.facts).filter(([, s]) => s.last && s.last.length);
     const pool = entries.flatMap(([, s]) => (s.t || []).slice(-5));
@@ -785,7 +801,8 @@
       return { a, b, misses, n: recent.length, med, ratio, ignored: all.length - times.length,
                score: errScore + slowScore };
     }).sort((x, y) => y.score - x.score);
-    return { base, cap, list, ready: entries.length >= 8 && pool.length >= 10, answers: pool.length };
+    return { base, cap, list, ready: entries.length >= NEED_FACTS && pool.length >= NEED_TIMES,
+             answers: pool.length, seen: entries.length };
   }
   // Facts that clearly stand out as hard
   const HARD = 0.25;
@@ -799,13 +816,21 @@
   const fmtSec = (ms) => (ms / 1000).toFixed(1).replace(".", ",") + " s";
 
   function renderHardCard() {
-    const an = analyse();
-    $("startHardest").disabled = !an.ready;
+    const an = analyse(), btn = $("startHardest");
+    btn.disabled = !an.ready;
+    btn.closest(".mode").classList.toggle("locked", !an.ready);
     if (!an.ready) {
-      $("hardText").textContent = "Öva några omgångar först, så lär sig appen vilka tal som är svårast för dig.";
+      // Show the mode as locked, with progress towards unlocking it
+      const left = Math.max(NEED_TIMES - an.answers, NEED_FACTS - an.seen);
+      const done = Math.min(an.answers, NEED_TIMES) + Math.min(an.seen, NEED_FACTS);
+      $("hardText").textContent = "Öva i de andra lägena först, så lär sig appen vilka tal som är svårast för dig.";
       $("hardList").innerHTML = "";
+      $("unlockFill").style.width = `${(done / (NEED_TIMES + NEED_FACTS)) * 100}%`;
+      $("unlockText").textContent = `${left} svar kvar`;
+      btn.innerHTML = `<svg class="icon"><use href="#i-lock"/></svg>Låst`;
       return;
     }
+    btn.textContent = "Träna";
     const top = an.list.filter(x => x.score >= HARD).slice(0, 6);
     $("hardText").textContent = top.length
       ? "Tränar på de tal du oftast svarar fel på eller behöver fundera längst på. Just nu:"
